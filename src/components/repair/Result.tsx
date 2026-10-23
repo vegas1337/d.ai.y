@@ -30,7 +30,7 @@ export function FollowUp({ questions, onAnswer, busy }: { questions: string[]; o
       className="space-y-5 rounded-2xl border border-border bg-card p-6 shadow-soft"
       onSubmit={(e) => {
         e.preventDefault();
-        onAnswer(questions.map((q, i) => ({ q, a: answers[i].trim() })));
+        onAnswer(questions.map((q, i) => ({ q, a: (answers[i] ?? "").trim() })));
       }}
     >
       <h2 className="flex items-center gap-2 text-2xl"><HelpCircle className="text-primary" /> A few quick questions</h2>
@@ -114,7 +114,7 @@ export function Guide({ result, problem, skill }: { result: RepairResult; proble
         </div>
         <ol className="space-y-3">
           {g.steps.map((s, i) => (
-            <Step key={i} index={i} step={s} done={done[i]} toggle={() => setDone((d) => d.map((x, j) => (j === i ? !x : x)))} problem={problem} skill={skill} />
+            <Step key={i} index={i} step={s} done={done[i] ?? false} toggle={() => setDone((d) => d.map((x, j) => (j === i ? !x : x)))} problem={problem} skill={skill} />
           ))}
         </ol>
         {progress === g.steps.length && <p className="rounded-xl bg-success p-4 font-semibold text-success-foreground">🎉 All steps done — nice work keeping it out of the bin!</p>}
