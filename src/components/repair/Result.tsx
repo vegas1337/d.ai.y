@@ -99,6 +99,7 @@ export function Guide({ result, problem, skill }: { result: RepairResult; proble
         </div>
         <div className="rounded-2xl border border-border bg-card p-5">
           <h3 className="mb-3 flex items-center gap-2 font-sans font-bold"><Package className="size-5 text-primary" /> Materials</h3>
+          {g.materials.length === 0 && <p className="text-sm text-muted-foreground">Nothing to buy for this repair.</p>}
           <ul className="space-y-2">{g.materials.map((m) => <InvRow key={m.name} name={`${m.quantity} × ${m.name}`} sub={m.spec} have={m.inInventory} />)}</ul>
         </div>
       </section>
@@ -166,7 +167,7 @@ function Step({ index, step, done, toggle, problem, skill }: { index: number; st
           {done ? <Check className="size-5" /> : index + 1}
         </button>
         <div className="flex-1 space-y-2">
-          <h3 className={`font-sans text-lg font-semibold ${done ? "line-through" : ""}`}>{step.title}</h3>
+          <h3 className={`font-sans text-lg font-semibold ${done ? "line-through" : ""}`}>{step.title.replace(/^\s*(step\s*)?\d+[.):]\s*/i, "")}</h3>
           <p className="leading-relaxed">{step.detail}</p>
           <div className="flex flex-wrap gap-2 pt-1">
             <Button size="sm" variant="ghost" disabled={busy} onClick={() => ask(null)}><RotateCcw /> Explain simpler</Button>
