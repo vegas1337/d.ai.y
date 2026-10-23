@@ -29,7 +29,7 @@ export async function runStructured<T>(opts: {
   schema: z.ZodType<T>;
   effort?: "low" | "medium";
 }): Promise<T> {
-  const apiKey = process.env.LOVABLE_API_KEY;
+  const apiKey = process.env["LOVABLE_API_KEY"];
   if (!apiKey) throw new AiError("config", "The AI service is not configured.");
   const provider = createOpenAI({
     baseURL: BASE_URL,
