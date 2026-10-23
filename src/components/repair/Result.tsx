@@ -69,6 +69,7 @@ export function Guide({ result, problem, skill }: { result: RepairResult; proble
   const [done, setDone] = useState<boolean[]>(g.steps.map(() => false));
   const progress = done.filter(Boolean).length;
   const toBuy = g.materials.filter((m) => !m.inInventory);
+  const toolsToGet = g.tools.filter((t) => !t.inInventory);
 
   return (
     <div className="space-y-8">
@@ -120,11 +121,24 @@ export function Guide({ result, problem, skill }: { result: RepairResult; proble
         {progress === g.steps.length && <p className="rounded-xl bg-success p-4 font-semibold text-success-foreground">🎉 All steps done — nice work keeping it out of the bin!</p>}
       </section>
 
-      {toBuy.length > 0 && (
+      {(toBuy.length > 0 || toolsToGet.length > 0) && (
         <section className="space-y-4">
           <h2 className="flex items-center gap-2 text-2xl"><Leaf className="text-primary" /> Where to get what's missing</h2>
           {g.reuseTip && <p className="rounded-xl bg-secondary p-4">{g.reuseTip}</p>}
           <p className="text-sm text-muted-foreground">Sample offers for demonstration — not live prices. Second-hand items are listed first. Check dimensions yourself: seller info is not verified compatibility.</p>
+          {toolsToGet.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="flex items-center gap-2 font-sans text-lg font-bold"><Wrench className="size-5 text-primary" /> Tools you don't have yet</h3>
+              <p className="text-sm text-muted-foreground">Tip: borrow before you buy — ask neighbours, a tool library or a repair café.</p>
+              {toolsToGet.map((t) => (
+                <div key={t.name} className="rounded-2xl border border-border bg-card p-4">
+                  <p className="font-semibold">{t.name}</p>
+                  <ShopLinks query={t.name} />
+                </div>
+              ))}
+            </div>
+          )}
+          {toBuy.length > 0 && <h3 className="flex items-center gap-2 font-sans text-lg font-bold"><Package className="size-5 text-primary" /> Parts & materials</h3>}
           {toBuy.map((m) => <OfferCompare key={m.name} name={m.name} spec={m.spec} category={m.category} />)}
         </section>
       )}
@@ -200,6 +214,7 @@ function OfferCompare({ name, spec, category }: { name: string; spec: string; ca
       <div className="border-b border-border p-4">
         <p className="font-semibold">{name}</p>
         <p className="text-sm text-muted-foreground">Needs: {spec}</p>
+        <ShopLinks query={name} />
       </div>
       {offers.length === 0 ? (
         <p className="p-4 text-sm text-muted-foreground">No matching sample offers. Try a local repair café or second-hand shop.</p>
@@ -228,6 +243,25 @@ function OfferCompare({ name, spec, category }: { name: string; spec: string; ca
           </table>
         </div>
       )}
+    </div>
+  );
+}
+
+function ShopLinks({ query }: { query: string }) {
+  const q = query.replace(/\(.*?\)/g, "").trim();
+  const used = `https://www.kleinanzeigen.de/s-${encodeURIComponent(q.toLowerCase().replace(/\s+/g, "-"))}/k0`;
+  const fresh = `https://www.obi.de/search/${encodeURIComponent(q)}/`;
+  return (
+    <div className="mt-3 space-y-1.5">
+      <div className="flex flex-wrap gap-2">
+        <a href={used} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-full bg-success px-3 py-1.5 text-sm font-semibold text-success-foreground hover:opacity-90">
+          <Leaf className="size-4" /> Used on Kleinanzeigen <ExternalLink className="size-3" />
+        </a>
+        <a href={fresh} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-sm font-semibold hover:border-primary">
+          New at OBI <ExternalLink className="size-3" />
+        </a>
+      </div>
+      <p className="text-xs text-muted-foreground">Opens a live search. We can't check availability yet — if Kleinanzeigen shows nothing, the new option is the fallback.</p>
     </div>
   );
 }
