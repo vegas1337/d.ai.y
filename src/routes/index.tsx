@@ -10,9 +10,9 @@ import type { RepairResult } from "@/lib/repair.schema";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Mendly — Safe AI help to repair it yourself" },
+      { title: "D.AI.Y — Safe AI help to repair it yourself" },
       { name: "description", content: "Describe what's broken in plain words. Get a safety check, simple step-by-step repair help and second-hand material options." },
-      { property: "og:title", content: "Mendly — Safe AI help to repair it yourself" },
+      { property: "og:title", content: "D.AI.Y — Safe AI help to repair it yourself" },
       { property: "og:description", content: "Plain-language repair guides with safety checks and sustainable sourcing." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -54,7 +54,7 @@ function Index() {
   return (
     <div className="min-h-screen bg-background bg-hero">
       <header className="mx-auto flex max-w-4xl items-center justify-between px-5 py-6">
-        <button onClick={reset} className="flex items-center gap-2 font-display text-2xl font-semibold"><Sprout className="text-primary" /> Mendly</button>
+        <button onClick={reset} className="flex items-center gap-2 font-display text-2xl font-semibold tracking-tight"><Sprout className="text-primary" /> D.AI.Y</button>
         <span className="hidden items-center gap-1.5 text-sm text-muted-foreground sm:flex"><Leaf className="size-4 text-primary" /> Repair first. Reuse second.</span>
       </header>
 
