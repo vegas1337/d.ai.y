@@ -221,7 +221,7 @@ export function Intake({ onSubmit, busy }: { onSubmit: (v: IntakeValues) => void
         </Button>
         <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
           <ShieldCheck className="mt-0.5 size-4 shrink-0" />
-          Your text and photo are sent to an AI service only to analyse this repair. Nothing is stored, and no account is needed. Please don't include names or addresses.
+          Your text and photo are sent to an AI service only to analyse this repair. No account is needed; profiles stay on this device. Please don't include names or addresses.
         </p>
       </div>
     </form>
