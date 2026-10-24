@@ -1,10 +1,13 @@
-import { useRef, useState } from "react";
-import { Camera, X, Leaf, ShieldCheck } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Camera, Trash2, User, X, Leaf, ShieldCheck } from "lucide-react";
+import { useHydrated } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import type { SkillLevel } from "@/lib/repair.schema";
+import { deleteProfile, getLastProfileId, readProfiles, saveProfile, setLastProfileId, type RepairProfile } from "@/lib/profiles";
 
 const EXAMPLES = [
   "My drawer is sticking and no longer closes properly.",
