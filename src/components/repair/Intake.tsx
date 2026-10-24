@@ -1,10 +1,13 @@
-import { useRef, useState } from "react";
-import { Camera, X, Leaf, ShieldCheck } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Camera, Trash2, User, X, Leaf, ShieldCheck } from "lucide-react";
+import { useHydrated } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import type { SkillLevel } from "@/lib/repair.schema";
+import { deleteProfile, getLastProfileId, readProfiles, saveProfile, setLastProfileId, type RepairProfile } from "@/lib/profiles";
 
 const EXAMPLES = [
   "My drawer is sticking and no longer closes properly.",
@@ -36,15 +39,107 @@ export function Intake({ onSubmit, busy }: { onSubmit: (v: IntakeValues) => void
   const [inventory, setInventory] = useState("");
   const [photo, setPhoto] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const hydrated = useHydrated();
+  const [profiles, setProfiles] = useState<RepairProfile[]>([]);
+  const [activeId, setActiveId] = useState<string>("none");
+  const [newName, setNewName] = useState("");
+
+  // Load saved profiles after hydration (they live in localStorage) and pre-select the last used one.
+  useEffect(() => {
+    const all = readProfiles();
+    setProfiles(all);
+    const last = all.find((p) => p.id === getLastProfileId());
+    if (last) {
+      setActiveId(last.id);
+      setSkill(last.skill);
+      setInventory(last.inventory);
+    }
+  }, []);
+
+  function selectProfile(id: string) {
+    setActiveId(id);
+    if (id === "none") {
+      setLastProfileId(null);
+      return;
+    }
+    if (id === "new") return;
+    const p = profiles.find((x) => x.id === id);
+    if (p) {
+      setSkill(p.skill);
+      setInventory(p.inventory);
+      setLastProfileId(p.id);
+    }
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (problem.trim().length < 5) return;
+    if (activeId === "new") {
+      const saved = saveProfile({ name: newName.trim() || "My profile", skill, inventory: inventory.trim() });
+      setProfiles(readProfiles());
+      setActiveId(saved.id);
+      setNewName("");
+    } else if (activeId !== "none") {
+      const p = profiles.find((x) => x.id === activeId);
+      if (p) {
+        saveProfile({ id: p.id, name: p.name, skill, inventory: inventory.trim() });
+        setProfiles(readProfiles());
+      }
+    }
+    onSubmit({ problem: problem.trim(), skill, inventory: inventory.trim(), photo });
+  }
 
   return (
-    <form
-      className="space-y-8"
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (problem.trim().length >= 5) onSubmit({ problem: problem.trim(), skill, inventory: inventory.trim(), photo });
-      }}
-    >
+    <form className="space-y-8" onSubmit={handleSubmit}>
+      {hydrated && (
+        <section className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-secondary/60 p-4">
+          <Label htmlFor="profile" className="flex items-center gap-2 text-sm font-semibold">
+            <User className="size-4 text-primary" /> Profile
+          </Label>
+          <select
+            id="profile"
+            value={activeId}
+            onChange={(e) => selectProfile(e.target.value)}
+            className="h-9 rounded-md border border-input bg-card px-3 text-sm"
+          >
+            <option value="none">No profile</option>
+            {profiles.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+            <option value="new">+ New profile…</option>
+          </select>
+          {activeId === "new" && (
+            <Input
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder="Profile name, e.g. Marvin"
+              className="h-9 w-48 bg-card"
+              maxLength={40}
+              aria-label="Profile name"
+            />
+          )}
+          {activeId !== "none" && activeId !== "new" && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                deleteProfile(activeId);
+                setProfiles(readProfiles());
+                setActiveId("none");
+              }}
+            >
+              <Trash2 /> Delete
+            </Button>
+          )}
+          <p className="w-full text-xs text-muted-foreground">
+            A profile saves your skill level and tools on this device, so they're pre-filled next time. Any changes you make below are saved when you submit.
+          </p>
+        </section>
+      )}
+
       <section className="space-y-3">
         <Label htmlFor="problem" className="text-base font-semibold">
           <span className="mr-2 inline-flex size-6 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">1</span>
@@ -126,7 +221,7 @@ export function Intake({ onSubmit, busy }: { onSubmit: (v: IntakeValues) => void
         </Button>
         <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
           <ShieldCheck className="mt-0.5 size-4 shrink-0" />
-          Your text and photo are sent to an AI service only to analyse this repair. Nothing is stored, and no account is needed. Please don't include names or addresses.
+          Your text and photo are sent to an AI service only to analyse this repair. No account is needed; profiles stay on this device. Please don't include names or addresses.
         </p>
       </div>
     </form>

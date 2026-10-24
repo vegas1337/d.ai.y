@@ -12,3 +12,4 @@
 - AI repair logic lives in `src/lib/repair.functions.ts` (server fns) with prompts versioned via `PROMPT_VERSION`; gateway calls only in `src/lib/ai.server.ts`. Why: keeps prompts traceable and secrets server-side.
 - Safety is enforced in code (`detectHazards` before AI, `enforceSafety` after) in `src/lib/repair.schema.ts`, covered by `src/test/safety.test.ts`. Why: AI output must never bypass hazard escalation.
 - Product offers are sample data in `src/lib/offers.ts` until real retailer integrations exist. Why: MVP scope.
+- User profiles (skill level + tool inventory) live in `src/lib/profiles.ts`, stored in localStorage only — no accounts yet. Why: the app promises no account is needed; cloud-synced accounts are later scope.
