@@ -19,12 +19,12 @@ function isProfile(x: unknown): x is RepairProfile {
   if (typeof x !== "object" || x === null) return false;
   const p = x as Record<string, unknown>;
   return (
-    typeof p.id === "string" &&
-    typeof p.name === "string" &&
-    typeof p.inventory === "string" &&
-    typeof p.createdAt === "number" &&
-    typeof p.skill === "string" &&
-    (SKILL_LEVELS as readonly string[]).includes(p.skill)
+    typeof p["id"] === "string" &&
+    typeof p["name"] === "string" &&
+    typeof p["inventory"] === "string" &&
+    typeof p["createdAt"] === "number" &&
+    typeof p["skill"] === "string" &&
+    (SKILL_LEVELS as readonly string[]).includes(p["skill"])
   );
 }
 
