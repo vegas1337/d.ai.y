@@ -3,7 +3,7 @@ import { useState } from "react";
 import { ArrowLeft, Leaf, Sprout } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Intake, type IntakeValues } from "@/components/repair/Intake";
-import { Escalation, FollowUp, Guide, RiskBadge } from "@/components/repair/Result";
+import { Escalation, FollowUp, Guide, LocalRules, RiskBadge, WorkPackages } from "@/components/repair/Result";
 import { assessCase } from "@/lib/repair.functions";
 import type { RepairResult } from "@/lib/repair.schema";
 
@@ -34,7 +34,8 @@ function Index() {
     setBusy(true);
     setError(null);
     try {
-      const r = await assessCase({ data: { ...values, answers: ans } });
+      const { profileId: _p, ...input } = values;
+      const r = await assessCase({ data: { ...input, answers: ans } });
       if (r.ok) setResult(r.result);
       else setError(r.error);
     } catch {
@@ -89,8 +90,10 @@ function Index() {
             {result && !busy && result.outcome === "follow_up" && (
               <FollowUp key={result.questions.join("|")} questions={result.questions} busy={busy} onAnswer={(a) => { const next = [...answers, ...a]; setAnswers(next); run(intake, next); }} />
             )}
+            {result && !busy && <WorkPackages packages={result.workPackages} />}
+            {result && !busy && <LocalRules rules={result.localRules} />}
             {result && !busy && (result.outcome === "escalate" || result.outcome === "not_recommended") && result.escalation && <Escalation result={result} />}
-            {result && !busy && result.outcome === "guide" && result.guide && <Guide result={result} problem={intake.problem} skill={intake.skill} />}
+            {result && !busy && result.outcome === "guide" && result.guide && <Guide result={result} problem={intake.problem} skill={Object.entries(intake.skills).map(([a, l]) => `${a}: ${l}`).join(", ")} stock={intake.materials} profileId={intake.profileId} />}
           </div>
         )}
       </main>

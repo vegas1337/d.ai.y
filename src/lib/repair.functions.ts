@@ -98,7 +98,7 @@ export const assessCase = createServerFn({ method: "POST" })
 
 const explainInput = z.object({
   problem: z.string().max(2000),
-  skill: z.string().max(40),
+  skill: z.string().max(300),
   stepTitle: z.string().max(300),
   stepDetail: z.string().max(2000),
   question: z.string().max(1000).nullable(),
