@@ -4,7 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import type { RepairResult } from "@/lib/repair.schema";
+import { findStock, type InventoryItem, type RepairResult, type WorkCategory } from "@/lib/repair.schema";
+import { deductMaterials } from "@/lib/profiles";
+import { toast } from "sonner";
 import { matchOffers } from "@/lib/offers";
 import { explainStep } from "@/lib/repair.functions";
 
@@ -64,8 +66,50 @@ export function Escalation({ result }: { result: RepairResult }) {
   );
 }
 
-export function Guide({ result, problem, skill }: { result: RepairResult; problem: string; skill: string }) {
+const PKG: Record<WorkCategory, { label: string; cls: string }> = {
+  diy: { label: "DIY", cls: "bg-success text-success-foreground" },
+  diy_prep: { label: "DIY prep for a pro", cls: "bg-secondary text-secondary-foreground" },
+  professional: { label: "Professional only", cls: "bg-warning text-warning-foreground" },
+  not_recommended: { label: "Not recommended", cls: "bg-destructive text-destructive-foreground" },
+};
+
+export function WorkPackages({ packages }: { packages: RepairResult["workPackages"] }) {
+  if (packages.length === 0) return null;
+  return (
+    <section className="rounded-2xl border border-border bg-card p-6 shadow-soft">
+      <h2 className="text-2xl">Who does what</h2>
+      <p className="mt-1 text-sm text-muted-foreground">Your skill level changes how detailed the help is — never which work needs a professional.</p>
+      <ul className="mt-4 space-y-3">
+        {packages.map((p) => (
+          <li key={p.title} className="rounded-xl border border-border p-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${PKG[p.category].cls}`}>{PKG[p.category].label}</span>
+              <span className="font-semibold">{p.title}</span>
+            </div>
+            <p className="mt-1 text-sm">{p.reason}</p>
+            {p.uncertain && p.wouldChangeIf && <p className="mt-1 text-xs text-muted-foreground">We chose the safer label because we're not sure. This could change if: {p.wouldChangeIf}</p>}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+export function LocalRules({ rules }: { rules: string[] }) {
+  if (rules.length === 0) return null;
+  return (
+    <section className="rounded-2xl border border-border bg-secondary p-5">
+      <h3 className="mb-2 flex items-center gap-2 font-sans font-bold"><HelpCircle className="size-5 text-primary" /> Check locally</h3>
+      <p className="mb-2 text-sm text-muted-foreground">These rules depend on where you live — we can't confirm them for you.</p>
+      <ul className="list-disc space-y-1 pl-5">{rules.map((r) => <li key={r}>{r.replace(/^check locally:\s*/i, "")}</li>)}</ul>
+    </section>
+  );
+}
+
+export function Guide({ result, problem, skill, stock, profileId }: { result: RepairResult; problem: string; skill: string; stock: InventoryItem[]; profileId: string | null }) {
   const g = result.guide!;
+  const [deducted, setDeducted] = useState(false);
+  const usedStock = g.materials.filter((m) => m.inInventory);
   const [done, setDone] = useState<boolean[]>(g.steps.map(() => false));
   const progress = done.filter(Boolean).length;
   const toBuy = g.materials.filter((m) => !m.inInventory);
@@ -101,7 +145,7 @@ export function Guide({ result, problem, skill }: { result: RepairResult; proble
         <div className="rounded-2xl border border-border bg-card p-5">
           <h3 className="mb-3 flex items-center gap-2 font-sans font-bold"><Package className="size-5 text-primary" /> Materials</h3>
           {g.materials.length === 0 && <p className="text-sm text-muted-foreground">Nothing to buy for this repair.</p>}
-          <ul className="space-y-2">{g.materials.map((m) => <InvRow key={m.name} name={`${m.quantity} × ${m.name}`} sub={m.spec} have={m.inInventory} />)}</ul>
+          <ul className="space-y-2">{g.materials.map((m) => <InvRow key={m.name} name={`${m.amount} ${m.unit} · ${m.name}`} sub={m.spec} have={m.inInventory} where={m.inInventory ? findStock(m.name, stock)?.location : undefined} />)}</ul>
         </div>
       </section>
 
@@ -119,13 +163,25 @@ export function Guide({ result, problem, skill }: { result: RepairResult; proble
           ))}
         </ol>
         {progress === g.steps.length && <p className="rounded-xl bg-success p-4 font-semibold text-success-foreground">🎉 All steps done — nice work keeping it out of the bin!</p>}
+        {progress === g.steps.length && usedStock.length > 0 && (
+          <div className="rounded-xl border border-border bg-card p-4 text-sm">
+            {profileId ? (
+              deducted ? <p>Your inventory is updated.</p> : (
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <span>Used from your stock: {usedStock.map((m) => `${m.amount} ${m.unit} ${m.name}`).join(", ")}</span>
+                  <Button size="sm" variant="outline" onClick={() => { deductMaterials(profileId, usedStock); setDeducted(true); toast.success("Used materials removed from your inventory"); }}>Remove from my inventory</Button>
+                </div>
+              )
+            ) : <p className="text-muted-foreground">Save a profile to keep track of the materials you use.</p>}
+          </div>
+        )}
       </section>
 
       {(toBuy.length > 0 || toolsToGet.length > 0) && (
         <section className="space-y-4">
           <h2 className="flex items-center gap-2 text-2xl"><Leaf className="text-primary" /> Where to get what's missing</h2>
           {g.reuseTip && <p className="rounded-xl bg-secondary p-4">{g.reuseTip}</p>}
-          <p className="text-sm text-muted-foreground">Sample offers for demonstration — not live prices. Second-hand items are listed first. Check dimensions yourself: seller info is not verified compatibility.</p>
+          <p className="text-sm text-muted-foreground">Labels: "Sample data" = demo offers, not live prices · "AI estimate" = worked out by the AI, please check · "seller info" = not verified. Second-hand items are listed first. Check dimensions yourself: seller info is not verified compatibility.</p>
           {toolsToGet.length > 0 && (
             <div className="space-y-3">
               <h3 className="flex items-center gap-2 font-sans text-lg font-bold"><Wrench className="size-5 text-primary" /> Tools you don't have yet</h3>
@@ -146,12 +202,13 @@ export function Guide({ result, problem, skill }: { result: RepairResult; proble
   );
 }
 
-function InvRow({ name, sub, have }: { name: string; sub?: string; have: boolean }) {
+function InvRow({ name, sub, have, where }: { name: string; sub?: string; have: boolean; where?: string }) {
   return (
     <li className="flex items-start gap-2">
       <span className={`mt-0.5 rounded-md px-1.5 py-0.5 text-xs font-semibold ${have ? "bg-success text-success-foreground" : "bg-muted text-muted-foreground"}`}>{have ? "✓ You have" : "Needed"}</span>
       <span>
         <span className="block">{name}</span>
+        {have && where && <span className="block text-xs text-muted-foreground">In your stock: {where}</span>}
         {sub && <span className="block text-sm text-muted-foreground">{sub} <em className="not-italic opacity-70">(AI estimate)</em></span>}
       </span>
     </li>

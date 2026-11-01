@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { Camera, Trash2, User, X, Leaf, ShieldCheck } from "lucide-react";
+import { Camera, Trash2, User, X, Leaf, ShieldCheck, Plus } from "lucide-react";
 import { useHydrated } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import type { SkillLevel } from "@/lib/repair.schema";
+import { DEFAULT_SKILLS, SKILL_AREAS, type InventoryItem, type SkillArea, type SkillLevel, type Skills } from "@/lib/repair.schema";
 import { deleteProfile, getLastProfileId, readProfiles, saveProfile, setLastProfileId, type RepairProfile } from "@/lib/profiles";
 
 const EXAMPLES = [
@@ -21,6 +21,8 @@ const SKILLS: { value: SkillLevel; label: string; hint: string }[] = [
   { value: "experienced", label: "Experienced", hint: "I'm comfortable with tools" },
 ];
 
+const AREA_LABEL: Record<SkillArea, string> = { woodwork: "Woodwork", plumbing: "Plumbing", electrical: "Electrical", network: "Network & smart home", heating: "Heating" };
+
 async function downscale(file: File): Promise<string> {
   const img = await createImageBitmap(file);
   const scale = Math.min(1, 1024 / Math.max(img.width, img.height));
@@ -31,12 +33,19 @@ async function downscale(file: File): Promise<string> {
   return c.toDataURL("image/jpeg", 0.82);
 }
 
-export type IntakeValues = { problem: string; skill: SkillLevel; inventory: string; photo: string | null };
+export type IntakeValues = { problem: string; skills: Skills; tools: string; materials: InventoryItem[]; photo: string | null; profileId: string | null };
 
 export function Intake({ onSubmit, busy }: { onSubmit: (v: IntakeValues) => void; busy: boolean }) {
   const [problem, setProblem] = useState("");
-  const [skill, setSkill] = useState<SkillLevel>("beginner");
-  const [inventory, setInventory] = useState("");
+  const [skills, setSkills] = useState<Skills>(DEFAULT_SKILLS);
+  const [tools, setTools] = useState("");
+  const [materials, setMaterials] = useState<InventoryItem[]>([]);
+  const allSame = SKILL_AREAS.every((a) => skills[a] === skills.woodwork) ? skills.woodwork : "";
+  function apply(p: RepairProfile) {
+    setSkills(p.skills);
+    setTools(p.tools);
+    setMaterials(p.materials);
+  }
   const [photo, setPhoto] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const hydrated = useHydrated();
@@ -51,8 +60,7 @@ export function Intake({ onSubmit, busy }: { onSubmit: (v: IntakeValues) => void
     const last = all.find((p) => p.id === getLastProfileId());
     if (last) {
       setActiveId(last.id);
-      setSkill(last.skill);
-      setInventory(last.inventory);
+      apply(last);
     }
   }, []);
 
@@ -65,8 +73,7 @@ export function Intake({ onSubmit, busy }: { onSubmit: (v: IntakeValues) => void
     if (id === "new") return;
     const p = profiles.find((x) => x.id === id);
     if (p) {
-      setSkill(p.skill);
-      setInventory(p.inventory);
+      apply(p);
       setLastProfileId(p.id);
     }
   }
@@ -74,19 +81,23 @@ export function Intake({ onSubmit, busy }: { onSubmit: (v: IntakeValues) => void
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (problem.trim().length < 5) return;
+    const cleanMaterials = materials.filter((m) => m.name.trim()).map((m) => ({ ...m, name: m.name.trim().slice(0, 100) }));
+    let profileId: string | null = null;
     if (activeId === "new") {
-      const saved = saveProfile({ name: newName.trim() || "My profile", skill, inventory: inventory.trim() });
+      const saved = saveProfile({ name: newName.trim() || "My profile", skills, tools: tools.trim(), materials: cleanMaterials });
+      profileId = saved.id;
       setProfiles(readProfiles());
       setActiveId(saved.id);
       setNewName("");
     } else if (activeId !== "none") {
       const p = profiles.find((x) => x.id === activeId);
       if (p) {
-        saveProfile({ id: p.id, name: p.name, skill, inventory: inventory.trim() });
+        saveProfile({ id: p.id, name: p.name, skills, tools: tools.trim(), materials: cleanMaterials });
+        profileId = p.id;
         setProfiles(readProfiles());
       }
     }
-    onSubmit({ problem: problem.trim(), skill, inventory: inventory.trim(), photo });
+    onSubmit({ problem: problem.trim(), skills, tools: tools.trim(), materials: cleanMaterials, photo, profileId });
   }
 
   return (
@@ -135,7 +146,7 @@ export function Intake({ onSubmit, busy }: { onSubmit: (v: IntakeValues) => void
             </Button>
           )}
           <p className="w-full text-xs text-muted-foreground">
-            A profile saves your skill level and tools on this device, so they're pre-filled next time. Any changes you make below are saved when you submit.
+            A profile saves your skills, tools and materials on this device, so they're pre-filled next time. Any changes you make below are saved when you submit.
           </p>
         </section>
       )}
@@ -193,7 +204,7 @@ export function Intake({ onSubmit, busy }: { onSubmit: (v: IntakeValues) => void
           <span className="mr-2 inline-flex size-6 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">2</span>
           How handy are you?
         </p>
-        <RadioGroup value={skill} onValueChange={(v) => setSkill(v as SkillLevel)} className="grid gap-3 sm:grid-cols-3">
+        <RadioGroup value={allSame} onValueChange={(v) => { const l = v as SkillLevel; setSkills({ woodwork: l, plumbing: l, electrical: l, network: l, heating: l }); }} className="grid gap-3 sm:grid-cols-3">
           {SKILLS.map((s) => (
             <Label key={s.value} htmlFor={s.value} className="flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-card p-4 has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:ring-2 has-[[data-state=checked]]:ring-ring/40">
               <RadioGroupItem id={s.value} value={s.value} className="mt-0.5" />
@@ -204,14 +215,49 @@ export function Intake({ onSubmit, busy }: { onSubmit: (v: IntakeValues) => void
             </Label>
           ))}
         </RadioGroup>
+        <details className="rounded-xl border border-border bg-card p-4" open={!allSame}>
+          <summary className="cursor-pointer text-sm font-semibold">Fine-tune by area (optional)</summary>
+          <p className="mt-1 text-xs text-muted-foreground">Changes how detailed the help is — never which work needs a professional.</p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            {SKILL_AREAS.map((a) => (
+              <label key={a} className="flex items-center justify-between gap-3 text-sm">
+                <span>{AREA_LABEL[a]}</span>
+                <select value={skills[a]} onChange={(e) => setSkills((s) => ({ ...s, [a]: e.target.value as SkillLevel }))} className="h-9 rounded-md border border-input bg-background px-2 text-sm">
+                  {SKILLS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                </select>
+              </label>
+            ))}
+          </div>
+        </details>
       </section>
 
       <section className="space-y-3">
-        <Label htmlFor="inventory" className="text-base font-semibold">
+        <Label className="text-base font-semibold">
           <span className="mr-2 inline-flex size-6 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">3</span>
           Tools & materials you already have <span className="font-normal text-muted-foreground">(optional)</span>
         </Label>
-        <Textarea id="inventory" value={inventory} onChange={(e) => setInventory(e.target.value)} placeholder="e.g. screwdriver set, drill, wood glue, a candle" className="bg-card" maxLength={1500} />
+        <Label htmlFor="tools" className="text-sm font-medium">Tools</Label>
+        <Textarea id="tools" value={tools} onChange={(e) => setTools(e.target.value)} placeholder="e.g. screwdriver set, drill, hammer" className="bg-card" maxLength={1500} />
+        <p className="text-sm font-medium">Materials in stock</p>
+        {materials.length > 0 && (
+          <div className="space-y-2">
+            {materials.map((m, i) => {
+              const set = (patch: Partial<InventoryItem>) => setMaterials((all) => all.map((x, j) => (j === i ? { ...x, ...patch } : x)));
+              return (
+                <div key={i} className="grid grid-cols-[1fr_5rem_5rem_auto] gap-2 sm:grid-cols-[1fr_5rem_5rem_9rem_auto]">
+                  <Input value={m.name} onChange={(e) => set({ name: e.target.value })} placeholder="e.g. wood screws 4×30" aria-label="Material name" className="bg-card" maxLength={100} />
+                  <Input type="number" min={0} step="any" value={m.quantity} onChange={(e) => set({ quantity: Math.max(0, Number(e.target.value) || 0) })} aria-label="Quantity" className="bg-card" />
+                  <Input value={m.unit} onChange={(e) => set({ unit: e.target.value })} placeholder="pcs" aria-label="Unit" className="bg-card" maxLength={20} />
+                  <Input value={m.location} onChange={(e) => set({ location: e.target.value })} placeholder="Where? (optional)" aria-label="Location" className="hidden bg-card sm:block" maxLength={60} />
+                  <Button type="button" variant="ghost" size="icon" aria-label="Remove material" onClick={() => setMaterials((all) => all.filter((_, j) => j !== i))}><X /></Button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        <Button type="button" variant="outline" size="sm" onClick={() => setMaterials((all) => [...all, { name: "", quantity: 1, unit: "pcs", location: "" }])} disabled={materials.length >= 100}>
+          <Plus /> Add material
+        </Button>
         <p className="flex items-center gap-1.5 text-sm text-muted-foreground"><Leaf className="size-4 text-primary" /> We'll use what you own first, so you buy less.</p>
       </section>
 
