@@ -1,0 +1,1 @@
+This folder holds the approval records of vegas1337/d.ai.y, one file per acceptance, each naming the file it accepts and the git blob SHA of the text that was accepted. The status of every use case, architecture file and SPEC change is derived from the approval records; a record is never edited to change a status.

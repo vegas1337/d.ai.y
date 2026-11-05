@@ -1,0 +1,1 @@
+This folder holds the architecture of vegas1337/d.ai.y: its decisions, one file per decision named `ARC-<nnn>-<slug>.md`, and its modules, one file per module named `MOD-<slug>.md`. A file counts as accepted only while an approval record in `docs/approvals/` names its current text: its status is derived from the approval records and is kept nowhere else.

@@ -1,0 +1,1 @@
+This folder holds the change queues of the SPEC of vegas1337/d.ai.y, one folder per queue, each entry a section proposed beside the text it would replace. An entry counts as accepted only when an approval record in `docs/approvals/` names its text: its status is derived from the approval records, and `SPEC.md` changes only by an accepted entry.
